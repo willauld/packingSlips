@@ -17,7 +17,7 @@ import (
 	//"github.com/xlsx"
 )
 
-var store_items = map[string]string{
+var storeItems = map[string]string{
 	"Full Ingredient Sake Kit": "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9\nLactic Acid 2 fl. Oz.\nYeast Nutrient 1 Oz.\nSpeedy Bentonite 2 Oz.",
 	"Sake Ingredient Kit":      "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9",
 	"Rice milled for Sake":     "Medium grain rice\nMilled to ~60% (Ginjo Level)\n10 lbs. bag",
@@ -43,104 +43,110 @@ type address struct {
 	phoneNumber string
 }
 type item struct {
-	quantity         int
-	title            string
-	item_price       float32
-	total_item_price float32
+	quantity       int
+	title          string
+	itemPrice      float32
+	totalItemPrice float32
 }
 type order struct {
-	billing       address
-	shipping      address
-	items         []item
-	total_item    float32
-	shipping_cost float32
-	total_order   float32
+	billing      address
+	shipping     address
+	items        []item
+	totalItem    float32
+	shippingCost float32
+	totalOrder   float32
 }
 
-func IntMax(a, b int) int {
+func intMax(a, b int) int {
 	if a > b {
 		return a
 	}
 	return b
 }
 
+// getQuantity gets the first integer in the string
 func getQuantity(line string) int {
 	var digit int
 	quantity := 0
-	first_digit := false
+	firstDigit := false
 
-	for i := 0; i < len(line); i += 1 {
+	for i := 0; i < len(line); i++ {
 		if line[i] >= '0' && line[i] <= '9' {
-			first_digit = true
+			firstDigit = true
 			digit = int(line[i]) - int('0')
 			quantity = quantity*10 + digit
-		}
-		if first_digit == true {
+		} else if firstDigit == true {
 			return quantity
 		}
 	}
 	return 0
 }
 
+// getTitle gets the first substring starting with [AZaz] to either a '$' or '--' sequence
 func getTitle(line string) string {
 
-	var start_char int
-	var end_char int
-	for i := 0; i < len(line); i += 1 {
+	startChar := 0
+	endChar := 0
+	for i := 0; i < len(line); i++ {
 		if line[i] >= 'A' && line[i] <= 'Z' || line[i] >= 'a' && line[i] <= 'z' {
-			start_char = i
+			startChar = i
 			break
 		}
 	}
-	for i := 0; i < len(line); i += 1 {
+	for i := 0; i < len(line); i++ {
 		if line[i] == '-' && line[i+1] == '-' {
-			end_char = i - 1
+			endChar = i - 1
 			break
 		}
 		if line[i] == '$' {
-			end_char = i - 1
+			endChar = i - 1
 			break
 		}
 	}
-	for j := end_char; ; j -= 1 {
+	if endChar == 0 {
+		endChar = len(line) - 1
+	}
+	for j := endChar; j >= 0; j-- {
 		if line[j] != ' ' && line[j] != '\t' {
-			end_char = j + 1
+			endChar = j + 1
 			break
 		}
 	}
-	return line[start_char:end_char]
+	return line[startChar:endChar]
 }
 
+// getPrice returns the first float number passed the '$'
 func getPrice(line string) float32 {
 
-	var start_char int
+	var startChar int
 	var price float32
-	past_point := 0
-	found_point := false
+	pastPoint := 0
+	foundPoint := false
 	price = 0.0
 
-	for i := 0; i < len(line); i += 1 {
+	for i := 0; i < len(line); i++ {
 		if line[i] == '$' {
-			start_char = i + 1
+			startChar = i + 1
 			break
 		}
 	}
-	for j := start_char; j < len(line); j += 1 {
+	for j := startChar; j < len(line); j++ {
 
 		if line[j] >= '0' && line[j] <= '9' {
 			price = price*10.0 + float32(int(line[j])-int('0'))
-			if found_point == true {
-				past_point += 1
+			if foundPoint == true {
+				pastPoint++
 			}
 		} else if line[j] == '.' {
-			found_point = true
+			foundPoint = true
 		}
 	}
-	price = price / float32(math.Pow(10.0, float64(past_point)))
+	price = price / float32(math.Pow(10.0, float64(pastPoint)))
 	return price
 }
 
-func output_spreadsheet(purchase order, xlsxPath string, save bool) {
+// outputSpreadsheet updates the template spreadsheet and prints it
+func outputSpreadsheet(purchase order, xlsxPath string, save bool) {
 
 	ole.CoInitialize(0)
 	defer ole.CoUninitialize()
@@ -203,9 +209,9 @@ func output_spreadsheet(purchase order, xlsxPath string, save bool) {
 	cell = sheet1.Range("f16")
 	cell.PutValue(billing.email)
 
-	start_row := 19
+	startRow := 19
 	for i, v := range purchase.items {
-		row := start_row + i
+		row := startRow + i
 
 		loc := fmt.Sprintf("b%d", row)
 		cell = sheet1.Range(loc)
@@ -213,32 +219,32 @@ func output_spreadsheet(purchase order, xlsxPath string, save bool) {
 
 		loc = fmt.Sprintf("c%d", row)
 		cell = sheet1.Range(loc)
-		cell.PutValue(store_items[v.title])
+		cell.PutValue(storeItems[v.title])
 
 		loc = fmt.Sprintf("e%d", row)
 		cell = sheet1.Range(loc)
 		cell.PutValue(v.quantity)
 
 		loc = fmt.Sprintf("f%d", row)
-		sheet1.Range(loc).PutValue(v.item_price) //&&&&&&&&&
+		sheet1.Range(loc).PutValue(v.itemPrice) //&&&&&&&&&
 		//cell = sheet1.Range(loc)
-		//cell.PutValue(v.item_price)
+		//cell.PutValue(v.itemPrice)
 
-		nl_count := strings.Count(v.title, "\n")
-		nl_count = IntMax(nl_count, strings.Count(store_items[v.title], "\n"))
-		row_range := fmt.Sprintf("%d:%d", row, row)
-		sheet1.Range(row_range).PutRowHeight(12.4 * float64(nl_count+1))
+		nlCount := strings.Count(v.title, "\n")
+		nlCount = intMax(nlCount, strings.Count(storeItems[v.title], "\n"))
+		rowRange := fmt.Sprintf("%d:%d", row, row)
+		sheet1.Range(rowRange).PutRowHeight(12.4 * float64(nlCount+1))
 	}
 	loc := fmt.Sprintf("g%d", 28)
 
 	cell = sheet1.Range(loc)
-	cell.PutValue(purchase.shipping_cost)
+	cell.PutValue(purchase.shippingCost)
 
 	if save == true {
-		save_to := "C:\\home\\auld\\personal\\Sake'\\PackingSlips\\email\\" +
+		saveTo := "C:\\home\\auld\\personal\\Sake'\\PackingSlips\\email\\" +
 			billing.firstName + ".xlsx"
-		fmt.Printf("Saveing Excel to: %s\n", save_to)
-		workbook.Save(save_to)
+		fmt.Printf("Saveing Excel to: %s\n", saveTo)
+		workbook.Save(saveTo)
 	} else {
 		sheet1.PrintOut(1, 1, 1) // params: fromPage, toPage, copies
 	}
@@ -248,7 +254,8 @@ func output_spreadsheet(purchase order, xlsxPath string, save bool) {
 	//workbook.Save(filepath2)
 }
 
-func print_purchase_record(purchase order, i int) {
+// printPurchaseRecord displays the purchase information on the terminal
+func printPurchaseRecord(purchase order, i int) {
 	b := purchase.billing
 	s := purchase.shipping
 	fmt.Println("")
@@ -269,20 +276,21 @@ func print_purchase_record(purchase order, i int) {
 	//fmt.Printf("Cap is %d, Len is %d\n", cap(purchase.items), len(purchase.items))
 	for i, v := range purchase.items {
 		fmt.Printf("%d - %45s $%6.2f      x%d      $%6.2f\n",
-			i, v.title, v.item_price, v.quantity, v.total_item_price)
+			i, v.title, v.itemPrice, v.quantity, v.totalItemPrice)
 	}
 	fmt.Printf("%78s\n", "=========")
-	fmt.Printf("%70s $%6.2f\n", "Item Total", purchase.total_item)
-	fmt.Printf("%70s $%6.2f\n", "Shipping", purchase.shipping_cost)
-	fmt.Printf("%70s $%6.2f\n", "Order Total", purchase.total_order)
+	fmt.Printf("%70s $%6.2f\n", "Item Total", purchase.totalItem)
+	fmt.Printf("%70s $%6.2f\n", "Shipping", purchase.shippingCost)
+	fmt.Printf("%70s $%6.2f\n", "Order Total", purchase.totalOrder)
 	fmt.Printf("---------------------------\n")
 }
 
+// main processes customer input csv file, displaying the orders and printer a packing list
 func main() {
 
 	//fpath := "C:\\home\\auld\\goDev\\src\\packingSlips\\packingSlipTemplate.xlsx"
-	default_xlsx := "packingSlipTemplate.xlsx"
-	xlsxPtr := pflag.String("xlsx", default_xlsx, "xlsx template file")
+	defaultXlsx := "packingSlipTemplate.xlsx"
+	xlsxPtr := pflag.String("xlsx", defaultXlsx, "xlsx template file")
 	pathPtr := pflag.String("input", "orders.csv", "input customer file in csv format")
 	listItPtr := pflag.Bool("listIt", false, "list the store items")
 
@@ -291,7 +299,7 @@ func main() {
 	//fmt.Println("tail:", pflag.Args())
 
 	if *listItPtr == true {
-		for k, v := range store_items {
+		for k, v := range storeItems {
 			fmt.Printf("key[%s] value[%s]\n", k, v)
 		}
 		os.Exit(0)
@@ -308,8 +316,8 @@ func main() {
 		os.Exit(1)
 		//panic(e)
 	}
-	fmt.Printf("default[%s], xlsxPtr[%s]\n", default_xlsx, *xlsxPtr)
-	if default_xlsx == *xlsxPtr {
+	fmt.Printf("default[%s], xlsxPtr[%s]\n", defaultXlsx, *xlsxPtr)
+	if defaultXlsx == *xlsxPtr {
 		cwd, _ := os.Getwd()
 		j := cwd + "\\" + *xlsxPtr
 		xlsxPtr = &j
@@ -320,19 +328,19 @@ func main() {
 	var addr *address
 	var parts []string
 	i := 0
-	total_items := 0
+	totalItems := 0
 	for scanner.Scan() {
 
 		line := scanner.Text()
 		if strings.Contains(line, "First Name:") {
 
-			for j := 0; j < 2; j += 1 {
+			for j := 0; j < 2; j++ {
 				if j == 0 {
 					addr = &orders[i].billing
 				} else {
 					addr = &orders[i].shipping
 				}
-				for exit_loop := false; exit_loop == false; {
+				for exitLoop := false; exitLoop == false; {
 					parts = strings.Split(line, ": ")
 					scanner.Scan()
 					line = scanner.Text()
@@ -360,31 +368,31 @@ func main() {
 						addr.zipCode = parts[1]
 					case "Email":
 						addr.email = parts[1]
-						exit_loop = true
+						exitLoop = true
 					case "Phone":
 						addr.phoneNumber = parts[1]
-						exit_loop = true
+						exitLoop = true
 					default:
 						from := "Billing"
 						if j > 0 {
 							from = "Shipping"
 						}
 						fmt.Printf("****missed: \"%s\" from %s\n", parts[0], from)
-						exit_loop = true
+						exitLoop = true
 					}
 				}
 			}
 
 			//Collect the purchased items here
-			orders[i].items = make([]item, 0) //item_array[total_items:0]
-			running_total := float32(0)
-			for exit_loop := false; exit_loop == false; {
+			orders[i].items = make([]item, 0) //item_array[totalItems:0]
+			runningTotal := float32(0)
+			for exitLoop := false; exitLoop == false; {
 				scanner.Scan()
 				line := scanner.Text()
 
 				if strings.Contains(line, "Total:") {
-					exit_loop = true
-					orders[i].total_order = getPrice(line)
+					exitLoop = true
+					orders[i].totalOrder = getPrice(line)
 				} else if strings.Contains(line, "-") {
 
 					quant := getQuantity(line)
@@ -392,32 +400,32 @@ func main() {
 					tip := getPrice(line)
 					price := tip / float32(quant)
 					a := item{
-						quantity:         quant,
-						title:            title,
-						item_price:       price,
-						total_item_price: tip,
+						quantity:       quant,
+						title:          title,
+						itemPrice:      price,
+						totalItemPrice: tip,
 					}
-					running_total = running_total + tip
+					runningTotal = runningTotal + tip
 
 					orders[i].items = append(orders[i].items, a)
-					total_items += 1
+					totalItems++
 				}
 			}
 
-			orders[i].total_item = running_total
-			orders[i].shipping_cost = orders[i].total_order - running_total
+			orders[i].totalItem = runningTotal
+			orders[i].shippingCost = orders[i].totalOrder - runningTotal
 
-			print_purchase_record(orders[i], i+1)
+			printPurchaseRecord(orders[i], i+1)
 
 			var input string
 			fmt.Printf("Print %s's packing slip? (Y/N/S)\n", orders[i].billing.firstName)
 			fmt.Scanf("%s\n", &input)
 			for {
 				if input == "S" || input == "s" {
-					output_spreadsheet(orders[i], *xlsxPtr, true)
+					outputSpreadsheet(orders[i], *xlsxPtr, true)
 					break
 				} else if input == "Y" || input == "y" {
-					output_spreadsheet(orders[i], *xlsxPtr, false)
+					outputSpreadsheet(orders[i], *xlsxPtr, false)
 					break
 				} else if input == "N" || input == "n" {
 					break
