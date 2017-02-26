@@ -17,6 +17,8 @@ import (
 	//"github.com/xlsx"
 )
 
+var version = struct {major int
+ minor int } {1, 0}
 var storeItems = map[string]string{
 	"Full Ingredient Sake Kit": "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9\nLactic Acid 2 fl. Oz.\nYeast Nutrient 1 Oz.\nSpeedy Bentonite 2 Oz.",
 	"Sake Ingredient Kit":      "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9",
@@ -290,6 +292,7 @@ func main() {
 
 	//fpath := "C:\\home\\auld\\goDev\\src\\packingSlips\\packingSlipTemplate.xlsx"
 	defaultXlsx := "packingSlipTemplate.xlsx"
+	versionPtr := pflag.Bool("version", false, "program version")
 	xlsxPtr := pflag.String("xlsx", defaultXlsx, "xlsx template file")
 	pathPtr := pflag.String("input", "orders.csv", "input customer file in csv format")
 	listItPtr := pflag.Bool("listIt", false, "list the store items")
@@ -298,6 +301,10 @@ func main() {
 	//fmt.Println("input:", *pathPtr)
 	//fmt.Println("tail:", pflag.Args())
 
+	if *versionPtr == true {
+		fmt.Printf("\t Version %d.%d", version.major, version.minor)
+		os.Exit(0)
+	}
 	if *listItPtr == true {
 		for k, v := range storeItems {
 			fmt.Printf("key[%s] value[%s]\n", k, v)
