@@ -17,8 +17,10 @@ import (
 	//"github.com/xlsx"
 )
 
-var version = struct {major int
- minor int } {1, 0}
+var version = struct {
+	major int
+	minor int
+}{1, 0}
 var storeItems = map[string]string{
 	"Full Ingredient Sake Kit": "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9\nLactic Acid 2 fl. Oz.\nYeast Nutrient 1 Oz.\nSpeedy Bentonite 2 Oz.",
 	"Sake Ingredient Kit":      "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9",
@@ -261,19 +263,19 @@ func printPurchaseRecord(purchase order, i int) {
 	b := purchase.billing
 	s := purchase.shipping
 	fmt.Println("")
-	fmt.Printf("%d: Shipping:                                            Billing:\n", i)
-	fmt.Printf("   =========                                            ========\n")
+	fmt.Printf("%d: Shipping:                            Billing:\n", i)
+	fmt.Printf("   =========                            ========\n")
 	s1 := s.firstName + " " + s.lastName
 	s2 := b.firstName + " " + b.lastName
 
-	fmt.Printf("%d: %-35s                  %-35s\n", i, s1, s2)
-	fmt.Printf("%d: %-35s                  %-35s\n", i, s.street, b.street)
+	fmt.Printf("%d: %-35s  %-35s\n", i, s1, s2)
+	fmt.Printf("%d: %-35s  %-35s\n", i, s.street, b.street)
 	// cancat first and last and then print in fixed space
 	l1 := s.city + ", " + s.state + " " + s.zipCode
 	l2 := b.city + ", " + b.state + " " + b.zipCode
-	fmt.Printf("%d: %-35s                  %-35s\n", i, l1, l2)
-	fmt.Printf("%d: %-35s                  %-35s\n", i, s.country, b.country)
-	fmt.Printf("%d: %-35s                  %-35s\n", i, b.phoneNumber, b.email)
+	fmt.Printf("%d: %-35s  %-35s\n", i, l1, l2)
+	fmt.Printf("%d: %-35s  %-35s\n", i, s.country, b.country)
+	fmt.Printf("%d: %-35s  %-35s\n", i, b.phoneNumber, b.email)
 	fmt.Println("")
 	//fmt.Printf("Cap is %d, Len is %d\n", cap(purchase.items), len(purchase.items))
 	for i, v := range purchase.items {
@@ -369,6 +371,9 @@ func main() {
 						addr.state = parts[1]
 					case "State":
 						addr.state = parts[1]
+						if len(orders[i].billing.state) < 1 {
+							orders[i].billing.state = parts[1]
+						}
 					case "Delivery State":
 						addr.state = parts[1]
 					case "Postal Code":
