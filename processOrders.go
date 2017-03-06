@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	//"pflags"
+	ole "github.com/go-ole/go-ole"
 	"github.com/spf13/pflag"
 
-	"github.com/go-ole/go-ole"
-	//"github.com/go-ole/go-ole/oleutil"
-	//"github.com/noypi/xlsx"
-	"github.com/willauld/xlsx"
+	"github.com/noypi/xlsx"
+	//"github.com/willauld/xlsx"
 	//"github.com/xlsx"
+	"log"
 )
 
 var version = struct {
@@ -325,7 +325,7 @@ func main() {
 		os.Exit(1)
 		//panic(e)
 	}
-	fmt.Printf("default[%s], xlsxPtr[%s]\n", defaultXlsx, *xlsxPtr)
+	//fmt.Printf("default[%s], xlsxPtr[%s]\n", defaultXlsx, *xlsxPtr)
 	if defaultXlsx == *xlsxPtr {
 		cwd, _ := os.Getwd()
 		j := cwd + "\\" + *xlsxPtr
@@ -338,6 +338,7 @@ func main() {
 	var parts []string
 	i := 0
 	totalItems := 0
+	var toString *string
 	for scanner.Scan() {
 
 		line := scanner.Text()
@@ -356,41 +357,60 @@ func main() {
 
 					switch parts[0] {
 					case "First Name":
-						addr.firstName = parts[1]
+						toString = &addr.firstName
+						*toString = parts[1]
 					case "Last Name":
-						addr.lastName = parts[1]
+						toString = &addr.lastName
+						*toString = parts[1]
 					case "Address":
-						addr.street = parts[1]
+						toString = &addr.street
+						*toString = parts[1]
 					case "City":
-						addr.city = parts[1]
+						toString = &addr.city
+						*toString = parts[1]
 					case "Country":
-						addr.country = parts[1]
+						toString = &addr.country
+						*toString = parts[1]
 					case "Country (From above Shipping Calc.)":
-						addr.country = parts[1]
+						toString = &addr.country
+						*toString = parts[1]
 					case "Billing State":
-						addr.state = parts[1]
+						toString = &addr.state
+						*toString = parts[1]
 					case "State":
-						addr.state = parts[1]
+						toString = &addr.state
+						*toString = parts[1]
 						if len(orders[i].billing.state) < 1 {
 							orders[i].billing.state = parts[1]
 						}
 					case "Delivery State":
-						addr.state = parts[1]
+						toString = &addr.state
+						*toString = parts[1]
 					case "Postal Code":
-						addr.zipCode = parts[1]
+						toString = &addr.zipCode
+						*toString = parts[1]
 					case "Email":
-						addr.email = parts[1]
+						toString = &addr.email
+						*toString = parts[1]
 						exitLoop = true
 					case "Phone":
-						addr.phoneNumber = parts[1]
+						toString = &addr.phoneNumber
+						*toString = parts[1]
 						exitLoop = true
 					default:
 						from := "Billing"
 						if j > 0 {
 							from = "Shipping"
 						}
-						fmt.Printf("****missed: \"%s\" from %s\n", parts[0], from)
-						exitLoop = true
+						if !strings.Contains(parts[0], ":") {
+							if toString == nil {
+								log.Fatal("toString is nil!!!")
+							}
+							*toString += ", " + parts[0] // note index 0 no 1
+							fmt.Printf("\n****updated: \"%s\" from %s\n\n", *toString, from)
+						} else {
+							fmt.Printf("\n****missed: \"%s\" from %s\n\n", parts[0], from)
+						}
 					}
 				}
 			}
