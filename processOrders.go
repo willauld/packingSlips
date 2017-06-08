@@ -14,13 +14,12 @@ import (
 	"github.com/noypi/xlsx"
 	//"github.com/willauld/xlsx"
 	//"github.com/xlsx"
-	"log"
 )
 
 var version = struct {
 	major int
 	minor int
-}{1, 0}
+}{1, 1}
 var storeItems = map[string]string{
 	"Full Ingredient Sake Kit": "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9\nLactic Acid 2 fl. Oz.\nYeast Nutrient 1 Oz.\nSpeedy Bentonite 2 Oz.",
 	"Sake Ingredient Kit":      "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9",
@@ -289,6 +288,151 @@ func printPurchaseRecord(purchase order, i int) {
 	fmt.Printf("---------------------------\n")
 }
 
+func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
+	var addr *address
+	var parts []string
+	var toString *string
+
+	line := scanner.Text()
+	// for loop to record customer data
+	for j := 0; j < 2; j++ {
+		if j == 0 {
+			addr = &(*ordersp)[i].billing
+		} else {
+			addr = &(*ordersp)[i].shipping
+		}
+		for exitLoop := false; exitLoop == false; {
+			parts = strings.Split(line, ": ")
+			scanner.Scan()
+			line = scanner.Text()
+
+			switch parts[0] {
+			case "First Name":
+				toString = &addr.firstName
+				*toString = parts[1]
+			case "Last Name":
+				toString = &addr.lastName
+				*toString = parts[1]
+			case "Address":
+				toString = &addr.street
+				*toString = parts[1]
+			case "City":
+				toString = &addr.city
+				*toString = parts[1]
+			case "Country":
+				toString = &addr.country
+				*toString = parts[1]
+			case "Country (From above Shipping Calc.)":
+				toString = &addr.country
+				*toString = parts[1]
+			case "Billing State":
+				toString = &addr.state
+				*toString = parts[1]
+			case "State":
+				toString = &addr.state
+				*toString = parts[1]
+				if len((*ordersp)[i].billing.state) < 1 {
+					(*ordersp)[i].billing.state = parts[1]
+				}
+			case "Delivery State":
+				toString = &addr.state
+				*toString = parts[1]
+			case "Postal Code":
+				toString = &addr.zipCode
+				*toString = parts[1]
+			case "Email":
+				toString = &addr.email
+				*toString = parts[1]
+				exitLoop = true
+			case "Phone":
+				toString = &addr.phoneNumber
+				*toString = parts[1]
+				exitLoop = true
+			default:
+				from := "Billing"
+				if j > 0 {
+					from = "Shipping"
+				}
+				if !strings.Contains(parts[0], ":") {
+					// Idea here is to append this line to the last input
+					// For example: street address appended with apartment number
+					if toString == nil {
+						//log.Fatal("readCustomerData()::toString is nil!!!")
+						//tmp := ""
+						//toString = &tmp
+						// may be useful
+						// However, if toSting is nil, we haven't got to the data block yet
+						// so just ignore it (FYI there is a "Purchase # xxxx" here that
+						// may be useful)
+					} else {
+						*toString += ", " + parts[0] // note index 0 no 1
+						fmt.Printf("\n****updated/combined: \"%s\" from %s\n\n", *toString, from)
+					}
+				} else {
+					fmt.Printf("\n****missed: \"%s\" from %s\n\n", parts[0], from)
+				}
+			}
+		}
+	} // end for loop to record customer data
+}
+
+func collectItemsPurchaseReport(ordersp *[]order, i int, scanner *bufio.Scanner) {
+	totalItems := 0
+
+	//Collect the purchased items here (purchase report)
+	(*ordersp)[i].items = make([]item, 0) //item_array[totalItems:0]
+	runningTotal := float32(0)
+	// for loop to load purchase report data
+	for exitLoop := false; exitLoop == false; {
+		scanner.Scan()
+		line := scanner.Text()
+
+		if strings.Contains(line, "Total:") {
+			exitLoop = true
+			(*ordersp)[i].totalOrder = getPrice(line)
+		} else if strings.Contains(line, "-") {
+
+			quant := getQuantity(line)
+			title := getTitle(line)
+			tip := getPrice(line)
+			price := tip / float32(quant)
+			a := item{
+				quantity:       quant,
+				title:          title,
+				itemPrice:      price,
+				totalItemPrice: tip,
+			}
+			runningTotal = runningTotal + tip
+
+			(*ordersp)[i].items = append((*ordersp)[i].items, a)
+			totalItems++
+		}
+	} //end load purchase report data
+
+	(*ordersp)[i].totalItem = runningTotal
+	(*ordersp)[i].shippingCost = (*ordersp)[i].totalOrder - runningTotal
+}
+
+func createPackingSlip(curOrder order, xlsx string) {
+	var input string
+	fmt.Printf("Print %s's packing slip? (Y/N/S)\n", curOrder.billing.firstName)
+	fmt.Scanf("%s\n", &input)
+	for {
+		if input == "S" || input == "s" {
+			outputSpreadsheet(curOrder, xlsx, true)
+			break
+		} else if input == "Y" || input == "y" {
+			outputSpreadsheet(curOrder, xlsx, false)
+			break
+		} else if input == "N" || input == "n" {
+			break
+		} else {
+			fmt.Printf("Need a Y, N or S\n")
+			fmt.Scanf("%s\n", &input)
+		}
+	}
+}
+
 // main processes customer input csv file, displaying the orders and printer a packing list
 func main() {
 
@@ -333,139 +477,14 @@ func main() {
 	}
 
 	scanner := bufio.NewScanner(f)
-
-	var addr *address
-	var parts []string
 	i := 0
-	totalItems := 0
-	var toString *string
 	for scanner.Scan() {
-
 		line := scanner.Text()
-		if strings.Contains(line, "First Name:") {
-
-			for j := 0; j < 2; j++ {
-				if j == 0 {
-					addr = &orders[i].billing
-				} else {
-					addr = &orders[i].shipping
-				}
-				for exitLoop := false; exitLoop == false; {
-					parts = strings.Split(line, ": ")
-					scanner.Scan()
-					line = scanner.Text()
-
-					switch parts[0] {
-					case "First Name":
-						toString = &addr.firstName
-						*toString = parts[1]
-					case "Last Name":
-						toString = &addr.lastName
-						*toString = parts[1]
-					case "Address":
-						toString = &addr.street
-						*toString = parts[1]
-					case "City":
-						toString = &addr.city
-						*toString = parts[1]
-					case "Country":
-						toString = &addr.country
-						*toString = parts[1]
-					case "Country (From above Shipping Calc.)":
-						toString = &addr.country
-						*toString = parts[1]
-					case "Billing State":
-						toString = &addr.state
-						*toString = parts[1]
-					case "State":
-						toString = &addr.state
-						*toString = parts[1]
-						if len(orders[i].billing.state) < 1 {
-							orders[i].billing.state = parts[1]
-						}
-					case "Delivery State":
-						toString = &addr.state
-						*toString = parts[1]
-					case "Postal Code":
-						toString = &addr.zipCode
-						*toString = parts[1]
-					case "Email":
-						toString = &addr.email
-						*toString = parts[1]
-						exitLoop = true
-					case "Phone":
-						toString = &addr.phoneNumber
-						*toString = parts[1]
-						exitLoop = true
-					default:
-						from := "Billing"
-						if j > 0 {
-							from = "Shipping"
-						}
-						if !strings.Contains(parts[0], ":") {
-							if toString == nil {
-								log.Fatal("toString is nil!!!")
-							}
-							*toString += ", " + parts[0] // note index 0 no 1
-							fmt.Printf("\n****updated: \"%s\" from %s\n\n", *toString, from)
-						} else {
-							fmt.Printf("\n****missed: \"%s\" from %s\n\n", parts[0], from)
-						}
-					}
-				}
-			}
-
-			//Collect the purchased items here
-			orders[i].items = make([]item, 0) //item_array[totalItems:0]
-			runningTotal := float32(0)
-			for exitLoop := false; exitLoop == false; {
-				scanner.Scan()
-				line := scanner.Text()
-
-				if strings.Contains(line, "Total:") {
-					exitLoop = true
-					orders[i].totalOrder = getPrice(line)
-				} else if strings.Contains(line, "-") {
-
-					quant := getQuantity(line)
-					title := getTitle(line)
-					tip := getPrice(line)
-					price := tip / float32(quant)
-					a := item{
-						quantity:       quant,
-						title:          title,
-						itemPrice:      price,
-						totalItemPrice: tip,
-					}
-					runningTotal = runningTotal + tip
-
-					orders[i].items = append(orders[i].items, a)
-					totalItems++
-				}
-			}
-
-			orders[i].totalItem = runningTotal
-			orders[i].shippingCost = orders[i].totalOrder - runningTotal
-
+		if strings.Contains(line, "Purchase Report" /*"First Name:"*/) {
+			readCustomerData(&orders, i, scanner)
+			collectItemsPurchaseReport(&orders, i, scanner)
 			printPurchaseRecord(orders[i], i+1)
-
-			var input string
-			fmt.Printf("Print %s's packing slip? (Y/N/S)\n", orders[i].billing.firstName)
-			fmt.Scanf("%s\n", &input)
-			for {
-				if input == "S" || input == "s" {
-					outputSpreadsheet(orders[i], *xlsxPtr, true)
-					break
-				} else if input == "Y" || input == "y" {
-					outputSpreadsheet(orders[i], *xlsxPtr, false)
-					break
-				} else if input == "N" || input == "n" {
-					break
-				} else {
-					fmt.Printf("Need a Y, N or S\n")
-					fmt.Scanf("%s\n", &input)
-				}
-			}
+			createPackingSlip(orders[i], *xlsxPtr)
 			i++
 		}
 	}
