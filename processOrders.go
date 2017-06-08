@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 
 	//"pflags"
@@ -288,23 +289,33 @@ func printPurchaseRecord(purchase order, i int) {
 	fmt.Printf("---------------------------\n")
 }
 
-func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
+func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner, transOrPurchase string) {
 	var addr *address
 	var parts []string
 	var toString *string
 
 	line := scanner.Text()
+
+	dataSections := 2
+	if transOrPurchase == "Transaction" {
+		dataSections = 3
+	}
 	// for loop to record customer data
-	for j := 0; j < 2; j++ {
-		if j == 0 {
+	for j := 0; j < dataSections; j++ {
+		if j%2 == 0 {
+			//fmt.Printf("J:%d, Billing\n", j)
 			addr = &(*ordersp)[i].billing
 		} else {
+			//fmt.Printf("J:%d, Shipping\n", j)
 			addr = &(*ordersp)[i].shipping
 		}
-		for exitLoop := false; exitLoop == false; {
+		i := 0
+		for exitLoop := false; exitLoop == false && i < 15; {
+			i++
 			parts = strings.Split(line, ": ")
 			scanner.Scan()
 			line = scanner.Text()
+			parts[0] = strings.TrimSpace(parts[0])
 
 			switch parts[0] {
 			case "First Name":
@@ -343,14 +354,30 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 			case "Email":
 				toString = &addr.email
 				*toString = parts[1]
-				exitLoop = true
+				if transOrPurchase == "Purchase" {
+					// Type "Purchase Report"" not "Transaction Report"
+					exitLoop = true
+				}
 			case "Phone":
 				toString = &addr.phoneNumber
 				*toString = parts[1]
+				if transOrPurchase == "Purchase" {
+					// Type "Purchase Report"" not "Transaction Report"
+					exitLoop = true
+				}
+			case "State/Province":
+				toString = &addr.state
+				*toString = parts[1]
+				if j == 2 {
+					exitLoop = true
+				}
+			case "Shipping Details":
+				exitLoop = true
+			case "Other Details":
 				exitLoop = true
 			default:
 				from := "Billing"
-				if j > 0 {
+				if j%2 == 1 {
 					from = "Shipping"
 				}
 				if !strings.Contains(parts[0], ":") {
@@ -365,8 +392,10 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 						// so just ignore it (FYI there is a "Purchase # xxxx" here that
 						// may be useful)
 					} else {
-						*toString += ", " + parts[0] // note index 0 no 1
-						fmt.Printf("\n****updated/combined: \"%s\" from %s\n\n", *toString, from)
+						if parts[0] != "" {
+							*toString += ", " + parts[0] // note index 0 no 1
+							fmt.Printf("\n****updated/combined: \"%s\" from %s\n\n", *toString, from)
+						}
 					}
 				} else {
 					fmt.Printf("\n****missed: \"%s\" from %s\n\n", parts[0], from)
@@ -376,11 +405,11 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 	} // end for loop to record customer data
 }
 
-func collectItemsPurchaseReport(ordersp *[]order, i int, scanner *bufio.Scanner) {
+func collectItemsPurchaseReport(orderp *order, scanner *bufio.Scanner) {
 	totalItems := 0
 
 	//Collect the purchased items here (purchase report)
-	(*ordersp)[i].items = make([]item, 0) //item_array[totalItems:0]
+	orderp.items = make([]item, 0) //item_array[totalItems:0]
 	runningTotal := float32(0)
 	// for loop to load purchase report data
 	for exitLoop := false; exitLoop == false; {
@@ -389,7 +418,7 @@ func collectItemsPurchaseReport(ordersp *[]order, i int, scanner *bufio.Scanner)
 
 		if strings.Contains(line, "Total:") {
 			exitLoop = true
-			(*ordersp)[i].totalOrder = getPrice(line)
+			orderp.totalOrder = getPrice(line)
 		} else if strings.Contains(line, "-") {
 
 			quant := getQuantity(line)
@@ -404,13 +433,94 @@ func collectItemsPurchaseReport(ordersp *[]order, i int, scanner *bufio.Scanner)
 			}
 			runningTotal = runningTotal + tip
 
-			(*ordersp)[i].items = append((*ordersp)[i].items, a)
+			orderp.items = append(orderp.items, a)
 			totalItems++
 		}
 	} //end load purchase report data
 
-	(*ordersp)[i].totalItem = runningTotal
-	(*ordersp)[i].shippingCost = (*ordersp)[i].totalOrder - runningTotal
+	orderp.totalItem = runningTotal
+	orderp.shippingCost = orderp.totalOrder - runningTotal
+}
+
+func getTransTitle(line string) string {
+	return strings.TrimSpace(line[0:strings.Index(line, "$")])
+}
+func getTransPrice(line string) float32 {
+	temp := line[strings.Index(line, "$")+1:]
+	temp = temp[0:strings.IndexAny(temp, " \t")]
+	price, err := strconv.ParseFloat(temp, 32)
+	if err != nil {
+		fmt.Printf("Price Error: %s", err)
+		price = -1
+	}
+	return float32(price)
+}
+func getTransQuantity(line string) int {
+	temp := line[strings.Index(line, "$"):]
+	temp = temp[strings.IndexAny(temp, " \t"):]
+	temp = temp[strings.IndexAny(temp, "0123456789"):]
+	temp = temp[:strings.IndexAny(temp, " \t")]
+	quant, err := strconv.ParseInt(temp, 10, 32)
+	if err != nil {
+		fmt.Printf("Quant error: %s", err)
+		quant = -1
+	}
+	return int(quant)
+}
+func getTransTotalPrice(line string) float32 {
+	temp := strings.TrimSpace(line[strings.LastIndex(line, "$")+1:])
+	price, err := strconv.ParseFloat(temp, 32)
+	if err != nil {
+		fmt.Printf("TotalPrice Error: %s", err)
+		price = -1
+	}
+	return float32(price)
+}
+
+func collectItemsTransactionReport(orderp *order, scanner *bufio.Scanner) {
+	totalItems := 0
+
+	//Collect the purchased items here (transaction report)
+	orderp.items = make([]item, 0) //item_array[totalItems:0]
+	runningTotal := float32(0)
+	// for loop to load purchase report data
+	for exitLoop := false; exitLoop == false; {
+		scanner.Scan()
+		line := scanner.Text()
+
+		if strings.Contains(line, "Total:") {
+			orderp.totalOrder = getPrice(line)
+		} else if strings.Contains(line, "Name	 Price	 Quantity	 Item Total") {
+			// Entering the item block
+			for {
+				scanner.Scan()
+				line := scanner.Text()
+				if strings.Index(line, "$") < 0 {
+					// Check for "$" is just to see if there is an item in this line
+					//fmt.Printf("### No $ fould exit loop\n")
+					exitLoop = true
+					break
+				}
+				quant := getTransQuantity(line)
+				title := getTransTitle(line)
+				tip := getTransTotalPrice(line)
+				price := getTransPrice(line)
+				a := item{
+					quantity:       quant,
+					title:          title,
+					itemPrice:      price,
+					totalItemPrice: tip,
+				}
+				runningTotal = runningTotal + tip
+
+				orderp.items = append(orderp.items, a)
+				totalItems++
+			}
+		}
+	} //end load purchase report data
+
+	orderp.totalItem = runningTotal
+	orderp.shippingCost = orderp.totalOrder - runningTotal
 }
 
 func createPackingSlip(curOrder order, xlsx string) {
@@ -480,9 +590,15 @@ func main() {
 	i := 0
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, "Purchase Report" /*"First Name:"*/) {
-			readCustomerData(&orders, i, scanner)
-			collectItemsPurchaseReport(&orders, i, scanner)
+		if strings.Contains(line, "Purchase Report") {
+			readCustomerData(&orders, i, scanner, "Purchase")
+			collectItemsPurchaseReport(&orders[i], scanner)
+			printPurchaseRecord(orders[i], i+1)
+			createPackingSlip(orders[i], *xlsxPtr)
+			i++
+		} else if strings.Contains(line, "Transaction Report") {
+			collectItemsTransactionReport(&orders[i], scanner)
+			readCustomerData(&orders, i, scanner, "Transaction")
 			printPurchaseRecord(orders[i], i+1)
 			createPackingSlip(orders[i], *xlsxPtr)
 			i++
