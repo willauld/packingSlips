@@ -1,0 +1,82 @@
+"Subject","Body","From: (Name)","From: (Address)","From: (Type)","To: (Name)","To: (Address)","To: (Type)","CC: (Name)","CC: (Address)","CC: (Type)","BCC: (Name)","BCC: (Address)","BCC: (Type)","Billing Information","Categories","Importance","Mileage","Sensitivity"
+"Transaction Report","Transaction Details
+Sale Log ID: Purchase # 1643
+
+Transaction ID: 1DF75314DT867912E
+Subtotal: $55.00
+Tax: $0.00
+Shipping: $19.45
+Total: $74.45
+Payment Method: PayPal Payments Standard 2.0
+Shipping Method: usps_flatrate
+Shipping Option: All US States Large
+
+Items
+
+Name	 Price	 Quantity	 Item Total	 
+Koji — keep refrigerated	 $11.00	 5	 $55.00	 
+
+Billing Details
+First Name : Dana
+Last Name : Honn
+Address : 527 Julia Street
+City : New Orleans
+Country : US
+Postal Code : 70130
+Email : dana@cafecarmo.com
+Phone : 504-450-4620
+
+Shipping Details
+First Name : Dana
+Last Name : Honn
+Address : 527 Julia Street
+City : New Orleans
+State/Province : Louisiana
+Country (From above Shipping Calc.) : US
+Postal Code : 70130
+
+Other Details
+State/Province : Louisiana
+
+","Will","will@homebrewsake.com","SMTP","will@auld.com","will@auld.com","SMTP",,,,,,,,,"Normal"
+"Transaction Report","Transaction Details
+Sale Log ID: Purchase # 1642
+
+Transaction ID: 41T84796AC008400V
+Subtotal: $35.00
+Tax: $0.00
+Shipping: $19.45
+Total: $54.45
+Payment Method: PayPal Payments Standard 2.0
+Shipping Method: usps_flatrate
+Shipping Option: All US States Large
+
+Items
+
+Name	 Price	 Quantity	 Item Total	 
+Rice milled for Sake	 $24.00	 1	 $24.00	 
+Koji — keep refrigerated	 $11.00	 1	 $11.00	 
+
+Billing Details
+First Name : Greg
+Last Name : Stewart
+Address : PO Box 7004
+City : Wilton
+Country : US
+Postal Code : 06897
+Email : gs06897@yahoo.com
+Phone : 2035211059
+
+Shipping Details
+First Name : Greg
+Last Name : Stewart
+Address : 557 Vincellette Street
+City : Bridgeport
+State/Province : Connecticut
+Country (From above Shipping Calc.) : US
+Postal Code : 06606
+
+Other Details
+State/Province : Connecticut
+
+","Will","will@homebrewsake.com","SMTP","will@auld.com","will@auld.com","SMTP",,,,,,,,,"Normal"
