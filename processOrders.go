@@ -317,6 +317,8 @@ type Pattern int
 
 const (
 	noPattern Pattern = iota
+	singleWordPattern
+	singletonZipPattern
 	zipLinePattern
 	phonePattern
 	emailPattern
@@ -334,12 +336,17 @@ func patternMatch(str string) Pattern {
 		slen++
 	}
 	for ; i < len(str2); i++ {
-		if '0' <= str2[i] && str2[i] <= '9' {
+		if '0' <= str2[i] && str2[i] <= '9' ||
+			str2[i] == ' ' || str2[i] == '-' {
 			slen++
 		}
 	}
 	if len(str2) == slen {
-		return phonePattern
+		if slen > 5 { // skip zip code on its own line
+			return phonePattern
+		} else {
+			return singletonZipPattern
+		}
 	}
 	if strings.Contains(str2, ",") {
 		s := strings.Split(str2, ",")
@@ -359,10 +366,21 @@ func patternMatch(str string) Pattern {
 		if len(code) == slen { // should check more on this patter
 			return zipLinePattern
 		}
-
 	}
+	word := str2
+	slen = 0
+	for i := 0; i < len(word); i++ {
+		if 'a' <= word[i] && word[i] <= 'z' ||
+			'A' <= word[i] && word[i] <= 'Z' {
+			slen++
+		}
+	}
+	if len(word) == slen {
+		return singleWordPattern
+	}
+	// first last names // i == 1
 	// city, state zip // zip line pattern i == n
-	// country i == n+1
+	// country i == n+1 // singleWord pattern
 	// phone // phone pattern
 	// email // email pattern
 	return noPattern
@@ -421,6 +439,27 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 			// email // email pattern
 			pattern := patternMatch(line)
 			switch pattern {
+			case singleWordPattern:
+				// "State/Province":
+				toString = &addr.state
+				if *toString == "" {
+					*toString = line
+				} else {
+					// "country":
+					toString = &addr.country
+					if *toString != "" {
+						fmt.Printf("Warning: Country being set twice!")
+					}
+					*toString = line
+				}
+			case singletonZipPattern:
+				szip := line
+				// "Postal Code":
+				toString = &addr.zipCode
+				if *toString != "" {
+					fmt.Printf("Warning: zip code being set twice!")
+				}
+				*toString = szip
 			case zipLinePattern:
 				city, state, zip := explodeZipLine(line)
 				// "City":
@@ -428,9 +467,15 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 				*toString = city
 				// "State/Province":
 				toString = &addr.state
+				if *toString != "" {
+					fmt.Printf("Warning: State being set twice!")
+				}
 				*toString = state
 				// "Postal Code":
 				toString = &addr.zipCode
+				if *toString != "" {
+					fmt.Printf("Warning: zip code being set twice!")
+				}
 				*toString = zip
 			case phonePattern:
 				toString = &addr.phoneNumber
