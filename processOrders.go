@@ -342,9 +342,13 @@ func patternMatch(str string) Pattern {
 		return phonePattern
 	}
 	if strings.Contains(str2, ",") {
-		s := strings.Split(str2, ", ")
+		s := strings.Split(str2, ",")
 		//city := s[0]
 		s2 := strings.Split(strings.TrimSpace(s[1]), " ")
+		if len(s2) < 2 {
+			// no following zip code
+			return noPattern
+		}
 		code := s2[1]
 		slen := 0
 		for i := 0; i < len(code); i++ {
