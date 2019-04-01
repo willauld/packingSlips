@@ -421,6 +421,12 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 		} else if strings.Contains(line, "Shipping address") {
 			//fmt.Printf("J:%d, Shipping\n", j)
 			addr = &(*ordersp)[i].shipping
+		} else if strings.Contains(line, "Note:") {
+			// print out the note to stdout
+			fmt.Printf("***%s\n***\n", line)
+			line = nonEmptyLine(scanner)
+			j--
+			continue
 		} else {
 			fmt.Printf("how'd I get here: %s\n", line)
 			continue
