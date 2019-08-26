@@ -322,11 +322,15 @@ const (
 	zipLinePattern
 	phonePattern
 	emailPattern
+	congratsPattern
 )
 
 func patternMatch(str string) Pattern {
 	if strings.Contains(str, "@") {
 		return emailPattern
+	}
+	if strings.Contains(str, "Congratulations") {
+		return congratsPattern
 	}
 	str2 := strings.TrimSpace(str)
 	slen := 0
@@ -489,6 +493,8 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 			case emailPattern:
 				toString = &addr.email
 				*toString = line
+			case congratsPattern:
+
 			case noPattern:
 				if strings.Contains(line, "Shipping address") ||
 					strings.Contains(line, "Home Brew Sake") {
