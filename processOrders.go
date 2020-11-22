@@ -20,19 +20,21 @@ import (
 var version = struct {
 	major int
 	minor int
-}{2, 1}
+}{2, 2}
 var storeItems = map[string]string{
-	"Full Ingredient Sake Kit": "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9\nLactic Acid 2 fl. Oz.\nYeast Nutrient 1 Oz.\nSpeedy Bentonite 2 Oz.",
+	"Full Ingredient Sake Kit": "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9\nLactic Acid 1 fl. Oz.\nYeast Nutrient 1 Oz.\nBentonite 1 Oz.\nPotassium Chloride 1 Oz.\nMagnesium Sulfate (AKA Epson salt) 1 Oz.",
 	"Sake Ingredient Kit":      "Rice milled to ~60% 10 lbs.\nKoji 40 Oz.\nYeast #9",
 	"Rice milled for Sake":     "Medium grain rice\nMilled to ~60% (Ginjo Level)\n10 lbs. bag",
 	"Koji":                     "Rice milled to ~60% cultured with koji kin\n40 oz package",
 	"Yeast #9":                 "Wyeast 4134 Sake",
-	"Lactic Acid 88%":          "Lactic Acid 88%\n2Fl. Oz.",
+	"Lactic Acid 88%":          "Lactic Acid 88%\n1Fl. Oz.",
 	"Yeast Nutrient":           "Thiamin, vitamin B complex\n1 Oz.",
-	"Speedy Bentonite":         "Bentonite clay wine clarifier\n2 Oz.",
+	"Bentonite":                "Bentonite clay wine clarifier\n1 Oz.",
 	"Koji-kin":                 "15g Powdered Rice Koji Starter\nEnough to make 2 batches of 2.5 lbs. koji each\nAspergillus oryzae and rice flour\nPrinted Instructions",
 	"Yeast #7":                 "White Labs WLP705",
 	"Special Ginjo Koji-kin":   "2 x 1g Powdered Akita Konno Special Ginjo Koji Starter\nEach 1g packet makes 3.14 lbs koji (6.28 lbs. total)\nAspergillus oryzae\nPrinted Instructions",
+	"Potassium Chloride":       "Granulated, 1 oz.",
+	"Magnesium Sulfate":        "Granulated, 1 oz.\nAKA Epson salt",
 }
 
 type address struct {
@@ -313,6 +315,7 @@ func nonEmptyLine(scanner *bufio.Scanner) (str string) {
 	return str
 }
 
+// Pattern is a type code
 type Pattern int
 
 const (
@@ -344,9 +347,8 @@ func patternMatch(str string) Pattern {
 	if len(str2) == slen {
 		if slen > 5 { // skip zip code on its own line
 			return phonePattern
-		} else {
-			return singletonZipPattern
 		}
+		return singletonZipPattern
 	}
 	if strings.Contains(str2, ",") {
 		s := strings.Split(str2, ",")
@@ -491,8 +493,8 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 				*toString = line
 			case noPattern:
 				if strings.Contains(line, "Shipping address") ||
-					strings.Contains(line, "Home Brew Sake") || 
-					strings.Contains(str, "Congratulations") {
+					strings.Contains(line, "Home Brew Sake") ||
+					strings.Contains(line, "Congratulations") {
 					// exit billing address loop
 					exitLoop = true
 				} else if i == 1 {
