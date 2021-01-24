@@ -7,3 +7,8 @@ Uses Win32 go-ole excel interface
 
 updated/migrated to work on Woo-commerce generated email
 
+To build:
+    go build processOrders.go
+
+To run test:
+    processOrders.exe

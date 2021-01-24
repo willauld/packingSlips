@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"math"
 	"os"
-	//"strconv"
+	"regexp"
+	"strconv"
 	"strings"
 
 	//"pflags"
@@ -55,6 +56,7 @@ type item struct {
 	totalItemPrice float32
 }
 type order struct {
+	orderNum     int
 	billing      address
 	shipping     address
 	items        []item
@@ -269,11 +271,13 @@ func outputSpreadsheet(purchase order, xlsxPath string, save bool) {
 
 // printPurchaseRecord displays the purchase information on the terminal
 func printPurchaseRecord(purchase order, i int) {
+	on := purchase.orderNum
 	b := purchase.billing
 	s := purchase.shipping
 	fmt.Println("")
 	fmt.Printf("%d: Shipping:                            Billing:\n", i)
 	fmt.Printf("   =========                            ========\n")
+	fmt.Printf("   #%d\n", on)
 	s1 := s.firstName + " " + s.lastName
 	s2 := b.firstName + " " + b.lastName
 
@@ -405,6 +409,17 @@ func explodeZipLine(l string) (city, state, code string) {
 		}
 	}
 	return "", "", ""
+}
+
+func getOrderNumber(orders *order, line string) {
+	re := regexp.MustCompile("[0-9]+")
+	i, err := strconv.Atoi(re.FindAllString(line, 1)[0])
+	if err != nil {
+		// handle error
+		fmt.Println(err)
+		os.Exit(2)
+	}
+	orders.orderNum = i
 }
 
 func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
@@ -659,6 +674,11 @@ func main() {
 	i := 0
 	for scanner.Scan() {
 		line := scanner.Text()
+		if strings.Contains(line, "[Order #") {
+			//fmt.Printf(line)
+			getOrderNumber(&orders[i], line)
+			fmt.Printf("Order Number: %d\n\n", orders[i].orderNum)
+		}
 		if strings.Contains(line, "Product	 Quantity	 Price") {
 			//fmt.Printf("found product heading\n")
 			collectItemsPurchaseReport(&orders[i], scanner)
