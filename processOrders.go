@@ -209,6 +209,9 @@ func outputSpreadsheet(purchase order, xlsxPath string, save bool) {
 	cell = sheet1.Range("c15")
 	cell.PutValue(shipping.country)
 
+	cell = sheet1.Range("c16")
+	cell.PutValue(purchase.orderNum)
+
 	cell = sheet1.Range("f12")
 	cell.PutValue(billing.firstName + " " + billing.lastName)
 
