@@ -133,7 +133,14 @@ func getTitle(line string) string {
 	}
 	for k, _ := range storeItems {
 		if strings.Contains(line[startChar:endChar], k) {
-			return k
+			if k != "Koji" {
+				return k
+			} else {
+				if strings.Contains(line[startChar:endChar], "Koji-kin") {
+					return "Koji-kin"
+				}
+				return k
+			}
 		}
 	}
 	return line[startChar:endChar]
