@@ -645,7 +645,7 @@ func createPackingSlip(curOrder order, xlsx string) {
 	}
 }
 
-func printMinNeeded(orders []order) {
+func printMinNeeded(orders []order, minNeededSF bool) {
 	//var x map[int]order
 	tin := make(map[string]int)
 	x := make(map[int]order)
@@ -659,15 +659,32 @@ func printMinNeeded(orders []order) {
 	sort.Ints(keys)
 
 	// from oldest order to newest print minNeeded
-	fmt.Printf("item# -                                    Title       Quantity    :  subtotal\n")
+	if minNeededSF == false {
+		fmt.Printf("item# -                                    Title       Quantity    :  subtotal\n")
+	} else {
+		fmt.Printf("%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\n",
+			"FulKit",
+			"SakKt",
+			"Rice",
+			"Koji",
+			"#9",
+			"Acid",
+			"Nut",
+			"Bent",
+			"Potas",
+			"epson",
+			"kojikn")
+	}
 	for _, k := range keys {
 		if k > 0 {
 			fmt.Printf("=================\n")
-			fmt.Printf("   #%d\n", k)
+			fmt.Printf("   #%d  %s\n", k, x[k].billing.lastName)
 			for i, v := range x[k].items {
 				tin[v.title] += v.quantity
-				fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-					i, v.title, v.quantity, tin[v.title])
+				if minNeededSF == false {
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, v.title, v.quantity, tin[v.title])
+				}
 				if strings.Contains(v.title, "Full Ingredient Sake Kit") {
 					tin["Rice milled for Sake"] += v.quantity
 					tin["Koji"] += v.quantity
@@ -677,37 +694,67 @@ func printMinNeeded(orders []order) {
 					tin["Bentonite"] += v.quantity
 					tin["Potassium Chloride"] += v.quantity
 					tin["Magnesium Sulfate"] += v.quantity
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Rice milled for Sake", v.quantity, tin["Rice milled for Sake"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Koji", v.quantity, tin["Koji"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Yeast #9", v.quantity, tin["Yeast #9"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Lactic Acid 88%", v.quantity, tin["Lactic Acid 88%"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Yeast Nutrient", v.quantity, tin["Yeast Nutrient"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Bentonite", v.quantity, tin["Bentonite"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Potassium Chloride", v.quantity, tin["Potassium Chloride"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Magnesium Sulfate", v.quantity, tin["Magnesium Sulfate"])
+					if minNeededSF == false {
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Rice milled for Sake", v.quantity, tin["Rice milled for Sake"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Koji", v.quantity, tin["Koji"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Yeast #9", v.quantity, tin["Yeast #9"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Lactic Acid 88%", v.quantity, tin["Lactic Acid 88%"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Yeast Nutrient", v.quantity, tin["Yeast Nutrient"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Bentonite", v.quantity, tin["Bentonite"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Potassium Chloride", v.quantity, tin["Potassium Chloride"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Magnesium Sulfate", v.quantity, tin["Magnesium Sulfate"])
+					}
 				} else if strings.Contains(v.title, "Sake Ingredient Kit") {
 					tin["Rice milled for Sake"] += v.quantity
 					tin["Koji"] += v.quantity
 					tin["Yeast #9"] += v.quantity
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Rice milled for Sake", v.quantity, tin["Rice milled for Sake"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Koji", v.quantity, tin["Koji"])
-					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
-						i, "Yeast #9", v.quantity, tin["Yeast #9"])
+					if minNeededSF == false {
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Rice milled for Sake", v.quantity, tin["Rice milled for Sake"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Koji", v.quantity, tin["Koji"])
+						fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+							i, "Yeast #9", v.quantity, tin["Yeast #9"])
+					}
 				}
 			}
 			//fmt.Println(k, x[k])
+			if minNeededSF == true {
+				fmt.Printf("%-7d\t%-7d\t%-7d\t%-7d\t%-7d\t%-7d\t%-7d\t%-7d\t%-7d\t%-7d\t%-7d\n",
+					tin["Full Ingredient Sake Kit"],
+					tin["Sake Ingredient Kit"],
+					tin["Rice milled for Sake"],
+					tin["Koji"],
+					tin["Yeast #9"],
+					tin["Lactic Acid 88%"],
+					tin["Yeast Nutrient"],
+					tin["Bentonite"],
+					tin["Potassium Chloride"],
+					tin["Magnesium Sulfate"],
+					tin["koji-kin"])
+			}
 		}
 	}
+	fmt.Printf("%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\t%-6s\n",
+		"FulKit",
+		"SakKt",
+		"Rice",
+		"Koji",
+		"#9",
+		"Acid",
+		"Nut",
+		"Bent",
+		"Potas",
+		"epson",
+		"kojikn")
 	fmt.Printf("\n\n")
 	fmt.Printf("                                        - Product  -  Total required - \n")
 	for k, v := range tin {
@@ -725,6 +772,7 @@ func main() {
 	pathPtr := pflag.String("input", "orders.csv", "input customer file in csv format")
 	listItPtr := pflag.Bool("listIt", false, "list the store items")
 	minNeededPtr := pflag.Bool("minNeeded", false, "list the minimum items of each type needed for the current orders")
+	minNeededSFPtr := pflag.Bool("minNeededSF", false, "use the short form for minNeeded")
 
 	pflag.Parse()
 
@@ -781,6 +829,6 @@ func main() {
 		}
 	}
 	if *minNeededPtr == true {
-		printMinNeeded(orders)
+		printMinNeeded(orders, *minNeededSFPtr)
 	}
 }
