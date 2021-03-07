@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,9 @@ import (
 	//"github.com/willauld/xlsx"
 	//"github.com/xlsx"
 )
+
+// DEBUGME is a bool to stop exess printing
+var DEBUGME bool
 
 var version = struct {
 	major int
@@ -125,6 +129,11 @@ func getTitle(line string) string {
 		if line[j] != ' ' && line[j] != '\t' {
 			endChar = j + 1
 			break
+		}
+	}
+	for k, _ := range storeItems {
+		if strings.Contains(line[startChar:endChar], k) {
+			return k
 		}
 	}
 	return line[startChar:endChar]
@@ -531,7 +540,9 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 						*toString = line
 					} else {
 						*toString += ", " + line
-						fmt.Printf("\n****updated/combined: \"%s\" \n\n", *toString)
+						if DEBUGME == true {
+							fmt.Printf("\n****updated/combined: \"%s\" \n\n", *toString)
+						}
 					}
 				}
 
@@ -556,11 +567,15 @@ func readCustomerData(ordersp *[]order, i int, scanner *bufio.Scanner) {
 					} else {
 						if parts[0] != "" {
 							*toString += ", " + parts[0] // note index 0 no 1
-							fmt.Printf("\n****updated/combined: \"%s\" \n\n", *toString)
+							if DEBUGME == true {
+								fmt.Printf("\n****updated/combined: \"%s\" \n\n", *toString)
+							}
 						}
 					}
 				} else {
-					fmt.Printf("\n****missed: \"%s\" \n\n", parts[0])
+					if DEBUGME == true {
+						fmt.Printf("\n****missed: \"%s\" \n\n", parts[0])
+					}
 				}
 			}
 		}
@@ -630,6 +645,76 @@ func createPackingSlip(curOrder order, xlsx string) {
 	}
 }
 
+func printMinNeeded(orders []order) {
+	//var x map[int]order
+	tin := make(map[string]int)
+	x := make(map[int]order)
+	keys := make([]int, 0)
+
+	// Convert orders to map and sort keys
+	for _, v := range orders {
+		x[v.orderNum] = v
+		keys = append(keys, v.orderNum)
+	}
+	sort.Ints(keys)
+
+	// from oldest order to newest print minNeeded
+	fmt.Printf("item# -                                    Title       Quantity    :  subtotal\n")
+	for _, k := range keys {
+		if k > 0 {
+			fmt.Printf("=================\n")
+			fmt.Printf("   #%d\n", k)
+			for i, v := range x[k].items {
+				tin[v.title] += v.quantity
+				fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+					i, v.title, v.quantity, tin[v.title])
+				if strings.Contains(v.title, "Full Ingredient Sake Kit") {
+					tin["Rice milled for Sake"] += v.quantity
+					tin["Koji"] += v.quantity
+					tin["Yeast #9"] += v.quantity
+					tin["Lactic Acid 88%"] += v.quantity
+					tin["Yeast Nutrient"] += v.quantity
+					tin["Bentonite"] += v.quantity
+					tin["Potassium Chloride"] += v.quantity
+					tin["Magnesium Sulfate"] += v.quantity
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Rice milled for Sake", v.quantity, tin["Rice milled for Sake"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Koji", v.quantity, tin["Koji"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Yeast #9", v.quantity, tin["Yeast #9"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Lactic Acid 88%", v.quantity, tin["Lactic Acid 88%"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Yeast Nutrient", v.quantity, tin["Yeast Nutrient"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Bentonite", v.quantity, tin["Bentonite"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Potassium Chloride", v.quantity, tin["Potassium Chloride"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Magnesium Sulfate", v.quantity, tin["Magnesium Sulfate"])
+				} else if strings.Contains(v.title, "Sake Ingredient Kit") {
+					tin["Rice milled for Sake"] += v.quantity
+					tin["Koji"] += v.quantity
+					tin["Yeast #9"] += v.quantity
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Rice milled for Sake", v.quantity, tin["Rice milled for Sake"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Koji", v.quantity, tin["Koji"])
+					fmt.Printf("%d - %45s       x%d    subtotal:  %d\n",
+						i, "Yeast #9", v.quantity, tin["Yeast #9"])
+				}
+			}
+			//fmt.Println(k, x[k])
+		}
+	}
+	fmt.Printf("\n\n")
+	fmt.Printf("                                        - Product  -  Total required - \n")
+	for k, v := range tin {
+		fmt.Printf("- %45s       %d\n", k, v)
+	}
+}
+
 // main processes customer input csv file, displaying the orders and printer a packing list
 func main() {
 
@@ -639,8 +724,10 @@ func main() {
 	xlsxPtr := pflag.String("xlsx", defaultXlsx, "xlsx template file")
 	pathPtr := pflag.String("input", "orders.csv", "input customer file in csv format")
 	listItPtr := pflag.Bool("listIt", false, "list the store items")
+	minNeededPtr := pflag.Bool("minNeeded", false, "list the minimum items of each type needed for the current orders")
 
 	pflag.Parse()
+
 	//fmt.Println("input:", *pathPtr)
 	//fmt.Println("tail:", pflag.Args())
 
@@ -680,15 +767,20 @@ func main() {
 		if strings.Contains(line, "[Order #") {
 			//fmt.Printf(line)
 			getOrderNumber(&orders[i], line)
-			fmt.Printf("Order Number: %d\n\n", orders[i].orderNum)
+			//fmt.Printf("Order Number: %d\n\n", orders[i].orderNum)
 		}
 		if strings.Contains(line, "Product	 Quantity	 Price") {
 			//fmt.Printf("found product heading\n")
 			collectItemsPurchaseReport(&orders[i], scanner)
 			readCustomerData(&orders, i, scanner)
-			printPurchaseRecord(orders[i], i+1)
-			createPackingSlip(orders[i], *xlsxPtr)
+			if *minNeededPtr == false {
+				printPurchaseRecord(orders[i], i+1)
+				createPackingSlip(orders[i], *xlsxPtr)
+			}
 			i++
 		}
+	}
+	if *minNeededPtr == true {
+		printMinNeeded(orders)
 	}
 }
